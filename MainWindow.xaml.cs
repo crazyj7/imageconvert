@@ -705,6 +705,10 @@ namespace ImageEditor
                             e.Handled = true;
                         }
                         break;
+                    case System.Windows.Input.Key.V:
+                        PasteImageFromClipboard();
+                        e.Handled = true;
+                        break;
                 }
             }
             else if (e.Key == System.Windows.Input.Key.F5)
@@ -801,6 +805,47 @@ namespace ImageEditor
             txtMousePos.Text = "위치: (-, -)";
             txtColorInfo.Text = "RGB: (-, -, -)";
             colorPreview.Fill = null;
+        }
+
+        private void PasteImageFromClipboard()
+        {
+            try
+            {
+                if (Clipboard.ContainsImage())
+                {
+                    SaveToUndoStack();
+                    
+                    // 클립보드에서 이미지 가져오기
+                    BitmapSource bitmapSource = Clipboard.GetImage();
+                    
+                    // BitmapImage로 변환
+                    var encoder = new PngBitmapEncoder();
+                    encoder.Frames.Add(BitmapFrame.Create(bitmapSource));
+
+                    using (var stream = new MemoryStream())
+                    {
+                        encoder.Save(stream);
+                        stream.Position = 0;
+
+                        var newImage = new BitmapImage();
+                        newImage.BeginInit();
+                        newImage.CacheOption = BitmapCacheOption.OnLoad;
+                        newImage.StreamSource = stream;
+                        newImage.EndInit();
+                        newImage.Freeze();
+
+                        currentImage = newImage;
+                        mainImage.Source = currentImage;
+                        currentImagePath = null; // 클립보드에서 붙여넣은 이미지는 파일 경로가 없음
+                        UpdateImageDisplay();
+                        statusText.Text = "클립보드의 이미지를 붙여넣었습니다.";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"이미지 붙여넣기 실패: {ex.Message}", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 } 
